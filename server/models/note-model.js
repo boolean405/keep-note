@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { appDbConnection } = require("../utils/db");
 const { Schema } = mongoose;
 
 const NoteSchema = new Schema(
@@ -12,6 +13,6 @@ const NoteSchema = new Schema(
   }
 );
 
-const NoteModel = mongoose.model("note", NoteSchema);
+const NoteModel = appDbConnection.model("note", NoteSchema);
 
 module.exports = NoteModel;

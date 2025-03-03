@@ -1,5 +1,5 @@
 const { Token } = require("./core");
-// const { Redis } = require("./redis");
+// const Redis = require("./redis");
 const UserDB = require("../models/user-model");
 
 const validateToken = () => {

@@ -1,5 +1,5 @@
 const UserDB = require("../models/user-model");
-// const { Redis } = require("../utils/redis");
+const Redis = require("../utils/redis");
 const { resMsg, Encoder, Token } = require("../utils/core");
 
 const paginateUser = async (req, res, next) => {
@@ -40,8 +40,6 @@ const paginateUser = async (req, res, next) => {
 const registerUser = async (req, res, next) => {
   try {
     let { name, email, phone, password } = req.body;
-    console.log(req.body.name);
-    
     email = email.toLowerCase();
 
     const dbEmailUser = await UserDB.findOne({ email });
@@ -60,8 +58,8 @@ const registerUser = async (req, res, next) => {
     // Password Encryption
     let encodedPassword = Encoder.encode(password);
     const registeredUser = await UserDB.create({
-      name :name,
-      email:email,
+      name: name,
+      email: email,
       phone: phone,
       password: encodedPassword,
     });
@@ -94,8 +92,10 @@ const loginUser = async (req, res, next) => {
 
     let user = dbUser.toObject();
     delete user.password;
-    // await Redis.set(user._id.toString(), user);
+    await Redis.set(user._id.toString(), user);
+    console.log(await Redis.get(user._id));
     
+
     user.token = Token.makeToken({ id: user._id.toString() });
     resMsg(res, "Login success", user);
   } catch (err) {
@@ -108,7 +108,7 @@ const loginUser = async (req, res, next) => {
 const profile = async (req, res, next) => {
   const user = req.user;
   console.log(user);
-  
+
   if (!user) {
     const error = new Error("Need to login!");
     error.status = 401;
@@ -126,9 +126,9 @@ const deleteUser = async (req, res, next) => {
       error.status = 404;
       return next(error);
     }
-    // if (await Redis.get(userId)) {
-    //   await Redis.delete(userId);
-    // }
+    if (await Redis.get(userId)) {
+      await Redis.delete(userId);
+    }
     await UserDB.findByIdAndDelete(userId);
     resMsg(res, `'${user.name}' user deleted`);
   } catch (err) {

@@ -1,5 +1,6 @@
 const NoteDB = require("../models/note-model");
 const { resMsg, Encoder, Token } = require("../utils/core");
+const { accountDbConnection } = require("../utils/db");
 
 const getPaginatedNote = async (req, res, next) => {
   try {
@@ -23,7 +24,11 @@ const getPaginatedNote = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .skip(skipCount)
       .limit(limit)
-      .select("-password");
+      .populate({
+        path: "user",
+        select: "-password",
+        connection: accountDbConnection,
+      });
     resMsg(
       res,
       `${users.length} notes paginated of total ${totalUser} notes, max ${limit} notes per page`,
@@ -47,7 +52,11 @@ const searchNote = async (req, res, next) => {
     : {};
   const notes = await NoteDB.find(keyword)
     .find({ user: { $eq: req.user._id } })
-    .select("-password");
+    .populate({
+      path: "user",
+      select: "-password",
+      connection: accountDbConnection,
+    });
   resMsg(res, "Search notes with keyword", notes);
 };
 
@@ -58,10 +67,11 @@ const getAllnotes = async (req, res, next) => {
     error.status = 401;
     return next(error);
   }
-  const notes = await NoteDB.find({ user: { $eq: user._id } }).populate(
-    "user",
-    "-password"
-  );
+  const notes = await NoteDB.find({ user: { $eq: user._id } }).populate({
+    path: "user",
+    select: "-password",
+    connection: accountDbConnection,
+  });
   resMsg(res, `${user.name}'s all notes`, notes);
 };
 
@@ -76,7 +86,12 @@ const addNewNote = async (req, res, next) => {
     }
 
     const note = await NoteDB.create({ title: title, text: text, user: user });
-    resMsg(res, "New note added", note);
+    const result = await NoteDB.findById(note._id).populate({
+      path: "user",
+      select: "-password",
+      connection: accountDbConnection,
+    });
+    resMsg(res, "New note added", result);
   } catch (err) {
     const error = new Error(err.message);
     error.status = 404;
@@ -87,7 +102,12 @@ const addNewNote = async (req, res, next) => {
 const getNote = async (req, res, next) => {
   try {
     const { noteId } = req.params;
-    const note = await NoteDB.findById(noteId).populate("user", "-password");
+    const note = await NoteDB.findById(noteId).populate({
+      path: "user",
+      select: "-password",
+      connection: accountDbConnection,
+    });
+    // const note = await NoteDB.findById(noteId).populate("user", "-password");
 
     if (!note) {
       const error = new Error("No found note with that id!");
@@ -114,7 +134,20 @@ const editNote = async (req, res, next) => {
       return next(error);
     }
 
-    const note = await NoteDB.findByIdAndUpdate(noteId);
+    if (dbNote._id !== req.user._id) {
+      const error = new Error("Can't edit other user's note!");
+      error.status = 401;
+      return next(error);
+    }
+
+    const note = await NoteDB.findByIdAndUpdate(noteId, {
+      title: title,
+      text: text,
+    }).populate({
+      path: "user",
+      select: "-password",
+      connection: accountDbConnection,
+    });
     resMsg(res, "Edited note", note);
   } catch (err) {
     const error = new Error(err.message);
@@ -126,11 +159,17 @@ const editNote = async (req, res, next) => {
 const deleteNote = async (req, res, next) => {
   try {
     const { noteId } = req.params;
-    const note = await NoteDB.findById(noteId);
+    const dbNote = await NoteDB.findById(noteId);
 
-    if (!note) {
+    if (!dbNote) {
       const error = new Error("No found note with that id!");
       error.status = 404;
+      return next(error);
+    }
+
+    if (dbNote._id !== req.user._id) {
+      const error = new Error("Can't delete other user's note!");
+      error.status = 401;
       return next(error);
     }
 
@@ -150,5 +189,5 @@ module.exports = {
   getNote,
   addNewNote,
   deleteNote,
-  editNote
+  editNote,
 };
