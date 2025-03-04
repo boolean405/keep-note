@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "reactnative-rand-chat",
-    "slug": "reactnative-rand-chat",
+    "name": "keep-note",
+    "slug": "keep-note",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

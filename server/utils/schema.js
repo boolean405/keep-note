@@ -2,7 +2,11 @@ const Joi = require("joi");
 
 const UserSchema = {
   register: Joi.object({
-    name: Joi.string().alphanum().min(3).max(30).required(),
+    name: Joi.string()
+      .regex(/^[A-Za-z\s]+$/)
+      .min(3)
+      .max(30)
+      .required(),
     email: Joi.string()
       .email({
         minDomainSegments: 2,

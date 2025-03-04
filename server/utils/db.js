@@ -1,12 +1,12 @@
 // database/database.js
 const mongoose = require("mongoose");
 
-// Connect to the user database
+// Connect to the Account database
 const accountDbConnection = mongoose.createConnection(
   process.env.ACCOUNT_DB_URI
 );
 
-// Connect to the post database
+// Connect to the App database
 const appDbConnection = mongoose.createConnection(process.env.APP_DB_URI);
 
 // Error handling for the user database connection

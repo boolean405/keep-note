@@ -1,41 +1,6 @@
 const UserDB = require("../models/user-model");
-const Redis = require("../utils/redis");
+const {Redis} = require("../utils/redis");
 const { resMsg, Encoder, Token } = require("../utils/core");
-
-const paginateUser = async (req, res, next) => {
-  try {
-    const pageNum = Number(req.params.pageNum);
-    if (!pageNum) {
-      const error = new Error(`Page no. must be number!`);
-      error.status = 400;
-      return next(error);
-    }
-    if (pageNum <= 0) {
-      const error = new Error(`Page Number must be greater than 0!`);
-      error.status = 400;
-      return next(error);
-    }
-    const limit = Number(process.env.PAGINATE_LIMIT);
-    const reqPage = pageNum == 1 ? 0 : pageNum - 1;
-
-    const skipCount = limit * reqPage;
-    const totalUser = await UserDB.countDocuments();
-    const user = await UserDB.find()
-      .sort({ createdAt: -1 })
-      .skip(skipCount)
-      .limit(limit)
-      .select("-password");
-    resMsg(
-      res,
-      `${user.length} users paginated of total ${totalUser} users, max ${limit} users per page`,
-      user
-    );
-  } catch (err) {
-    const error = new Error(err.message);
-    error.status = 404;
-    return next(error);
-  }
-};
 
 const registerUser = async (req, res, next) => {
   try {
@@ -93,8 +58,7 @@ const loginUser = async (req, res, next) => {
     let user = dbUser.toObject();
     delete user.password;
     await Redis.set(user._id.toString(), user);
-    console.log(await Redis.get(user._id));
-    
+    // console.log(await Redis.get(user._id));
 
     user.token = Token.makeToken({ id: user._id.toString() });
     resMsg(res, "Login success", user);
@@ -115,6 +79,33 @@ const profile = async (req, res, next) => {
     return next(error);
   }
   resMsg(res, "User profile", user);
+};
+
+const editUser = async (req, res, next) => {
+  try {
+    let { userId, name, username, email, phone } = req.body;
+    const dbUser = await UserDB.findById(userId);
+    username = username.toLowerCase();
+
+    if (!dbUser) {
+      const error = new Error("No found user with that id!");
+      error.status = 404;
+      return next(error);
+    }
+
+    const editedUser = await UserDB.findByIdAndUpdate(userId, {
+      name: name,
+      username: username,
+      email: email,
+      phone: phone,
+    });
+    const user = await UserDB.findById(editedUser._id);
+    resMsg(res, "Edited user", user);
+  } catch (err) {
+    const error = new Error(err.message);
+    error.status = 404;
+    return next(error);
+  }
 };
 
 const deleteUser = async (req, res, next) => {
@@ -138,26 +129,10 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-const searchUser = async (req, res, next) => {
-  const keyword = req.query.search
-    ? {
-        $or: [
-          { name: { $regex: req.query.search, $options: "i" } },
-          { userName: { $regex: req.query.search, $options: "i" } },
-        ],
-      }
-    : {};
-  const users = await UserDB.find(keyword)
-    // .find({ _id: { $ne: req.user._id } })
-    .select("-password");
-  resMsg(res, "Search user with keyword", users);
-};
-
 module.exports = {
-  paginateUser,
   registerUser,
   loginUser,
   profile,
+  editUser,
   deleteUser,
-  searchUser,
 };
