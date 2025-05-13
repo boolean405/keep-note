@@ -1,5 +1,5 @@
 const UserDB = require("../models/user-model");
-const {Redis} = require("../utils/redis");
+// const {Redis} = require("../utils/redis");
 const { resMsg, Encoder, Token } = require("../utils/core");
 
 const registerUser = async (req, res, next) => {
@@ -57,7 +57,7 @@ const loginUser = async (req, res, next) => {
 
     let user = dbUser.toObject();
     delete user.password;
-    await Redis.set(user._id.toString(), user);
+    // await Redis.set(user._id.toString(), user);
     // console.log(await Redis.get(user._id));
 
     user.token = Token.makeToken({ id: user._id.toString() });
@@ -117,9 +117,9 @@ const deleteUser = async (req, res, next) => {
       error.status = 404;
       return next(error);
     }
-    if (await Redis.get(userId)) {
-      await Redis.delete(userId);
-    }
+    // if (await Redis.get(userId)) {
+    //   await Redis.delete(userId);
+    // }
     await UserDB.findByIdAndDelete(userId);
     resMsg(res, `'${user.name}' user deleted`);
   } catch (err) {
